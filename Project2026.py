@@ -176,8 +176,12 @@ def plot_pitch_PI_design(Kq, Ktheta, a_theta):
     plt.plot(t, y)
     plt.xlabel("Time [s]")
     plt.ylabel(r"$\theta/\theta_c$")
-    plt.title("Task 1: Closed-Loop Pitch Attitude Step Response")
+    plt.title("Closed-Loop Pitch Attitude Step Response")
     plt.grid(True)
+    plt.show()
+
+    ct.root_locus_plot(L,grid = False)
+    plt.title('PI Root Locus Plot')
     plt.show()
 
     print("\nTask 1 closed-loop pitch poles:")
@@ -293,12 +297,13 @@ def plot_auto_throttle_design(Kq, Ktheta, a_theta, Ku_kN):
     ct.bode_plot(L, omega=omega, dB=True, display_margins = True)
     plt.suptitle(f"Auto-throttle Open-Loop Bode, Ku={Ku_kN:g} kN/(m/s)")
     plt.show()
-    """
+
     plt.figure()
-    ct.bode_plot(L, display_margins = True)
-    plt.title("Auto-throttle Margins")
+    ct.root_locus_plot(L,grid = False)
+    # Display the plot
+    plt.title('Auto Throttle Root Locus Plot')
     plt.show()
-    """
+
     print_margins("Auto-throttle Margins", L)
 
 
@@ -545,12 +550,12 @@ def plot_coupler_design(Kq, Ktheta, a_theta, Ku_kN, KE, R, sign=-1.0,
     ct.bode_plot(L, omega=omega, dB=True, display_margins = True)
     plt.suptitle("Task 3: Coupler Open-Loop Bode")
     plt.show()
-    """
+
     plt.figure()
-    ct.bode_plot(L, display_margins = True)
-    plt.title("Task 3: Coupler Margins")
+    ct.root_locus_plot(L,grid = False)
+    # Display the plot
+    plt.title('Coupler (Lead + PI) Root Locus Plot')
     plt.show()
-    """
     print_margins("Task 3 Coupler Margins", L)
 
 
@@ -594,14 +599,26 @@ def simulate_full_response(Kq, Ktheta, a_theta, Ku_kN, KE, R, sign=-1.0,
         "deltaE [rad]"
     ]
 
-    for i, label in enumerate(labels):
-        plt.figure()
-        plt.plot(t, y[i, :])
-        plt.xlabel("Time [s]")
-        plt.ylabel(label)
-        plt.title(f"{title_suffix}: {label}, d0={d0:+.0f} m")
-        plt.grid(True)
+    def plot_full_response_stacked(t, y, labels, title="Full System Response"):
+        n = len(labels)
+
+        fig, axes = plt.subplots(n, 1, figsize=(10, 10), sharex=True)
+
+        for i in range(n):
+            axes[i].plot(t, y[i, :], linewidth=1)
+            axes[i].set_ylabel(labels[i])
+            axes[i].grid(True)
+
+        axes[-1].set_xlabel("Time [s]")
+        fig.suptitle(title)
+
+        plt.tight_layout()
         plt.show()
+
+    plot_full_response_stacked(
+        t, y, labels,
+        title=f"{title_suffix}, d0={d0:+.0f} m"
+    )
 
     poles = np.linalg.eigvals(A)
 
@@ -646,7 +663,7 @@ def compare_ranges(Kq, Ktheta, a_theta, Ku_kN,
 
     plt.xlabel("Time [s]")
     plt.ylabel("d [m]")
-    plt.title("Task 4: Range Scheduling Comparison")
+    plt.title("Range Scheduling Comparison")
     plt.grid(True)
     plt.legend()
     plt.show()
@@ -661,9 +678,9 @@ if __name__ == "__main__":
     # --------------------------------------------------------
     # SELECTED GAINS FROM YOUR WORK
     # --------------------------------------------------------
-    Kq = -3.2
-    Ktheta = -4.8381
-    a_theta = 0.01899
+    Kq = -2.9
+    Ktheta = -4.5887
+    a_theta = 0.0169
 
     # Replace this after Ku sweep.
     Ku_kN = 141.7059
@@ -671,15 +688,20 @@ if __name__ == "__main__":
     #Ku_kN = 119.0924
 
     # Replace these after coupler sweep.
-    KE_4000 = 20.8178
-    KE_200 = 1.05
+    KE_4000 = 16.5
+    KE_200 = 0.84
 
     coupler_sign = -1.0
-    z_pi = 11
+    z_pi = 13
     z_lead = 0.01
-    p_lead = 30
+    p_lead = 25
+
     """
+    Add the Lead of the Coupler to target a maximum phase lead around 0.15 r/s. Add the PI to
+    achieve crossover at 0.1-0.2 r/s, PM>= 60, and GM=20 dB. See that the bandwidth
+    (crossover frequency) is decreasing as the design progresses.
     ↑ z_pi → stronger low-frequency correction
+    
        → faster elimination of d(t)
        → larger elevator spike
 
@@ -710,7 +732,7 @@ if __name__ == "__main__":
     print("TASK 1: PITCH CONTROL")
     print("======================")
 
-    #plot_Kq_poles([-3.2])
+    #plot_Kq_poles([ -2.9])
     #plot_pitch_PI_design(Kq, Ktheta, a_theta)
     #candidates = find_pitch_PI_candidates(Kq)
 
@@ -770,19 +792,19 @@ if __name__ == "__main__":
     print("TASK 3: COUPLER DESIGN AT R = 4000 m")
     print("======================")
 
-    KE_values = np.logspace(-4, 4, 180)
+    #KE_values = np.logspace(-2, 2, 180)
     """
     candidates_4000 = sweep_coupler(
         Kq, Ktheta, a_theta, Ku_kN,
         R=4000.0,
         KE_values=KE_values,
-        sign_values=(-1.0, 1.0),
-        z_pi_values=(0.1, 0.2, 0.3,0.4),
-        z_lead_values=(0.03, 0.04, 0.06, 0.08),
-        p_lead_values=(0.3, 0.4, 0.6, 0.8)
+        sign_values=([-1.0]),
+        z_pi_values=([13,14,15,16,17,18,19.20]),
+        z_lead_values=([0.01, 0.02]),
+        p_lead_values=([25, 30,35,40,45,50])
     )
     
-    """
+    
     plot_coupler_design(
         Kq, Ktheta, a_theta, Ku_kN,
         KE=KE_4000,
@@ -793,6 +815,7 @@ if __name__ == "__main__":
         p_lead=p_lead
     )
 
+    """
     simulate_full_response(
         Kq, Ktheta, a_theta, Ku_kN,
         KE=KE_4000,
@@ -802,10 +825,10 @@ if __name__ == "__main__":
         z_lead=z_lead,
         p_lead=p_lead,
         d0=40.0,
-        tfinal=100.0,
-        title_suffix="Task 3, R=4000 m"
+        tfinal=70.0,
+        title_suffix="R=4000 m"
     )
-    """
+    
 
 
 
@@ -816,7 +839,7 @@ if __name__ == "__main__":
     print("\n======================")
     print("TASK 4: RANGE = 200 m")
     print("======================")
-
+    """
     candidates_200 = sweep_coupler(
         Kq, Ktheta, a_theta, Ku_kN,
         R=200.0,
@@ -827,6 +850,7 @@ if __name__ == "__main__":
         p_lead_values=(0.3, 0.4, 0.6, 0.8)
     )
     """
+    """
     plot_coupler_design(
         Kq, Ktheta, a_theta, Ku_kN,
         KE=KE_200,
@@ -836,7 +860,7 @@ if __name__ == "__main__":
         z_lead=z_lead,
         p_lead=p_lead
     )
-
+    """
     simulate_full_response(
         Kq, Ktheta, a_theta, Ku_kN,
         KE=KE_200,
@@ -846,8 +870,8 @@ if __name__ == "__main__":
         z_lead=z_lead,
         p_lead=p_lead,
         d0=40.0,
-        tfinal=100.0,
-        title_suffix="Task 4, R=200 m"
+        tfinal=70.0,
+        title_suffix="R=200 m"
     )
     """
     compare_ranges(
